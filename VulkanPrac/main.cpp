@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
+#include <optional>
 
 
 const uint32_t WINDOW_WIDTH = 800;
@@ -39,6 +40,16 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 }
 
 
+struct QueueFamilyIndices
+{
+	std::optional<uint32_t> graphicsFamily;
+
+	bool isComplete() {
+		return graphicsFamily.has_value();
+	}
+};
+
+
 class HelloTriangleApplication {
 public:
 	void run() {
@@ -71,6 +82,7 @@ private:
 	void initVulkan() {
 		createInstance();
 		setupDebugMessenger();
+		pickPhysicalDevice();
 	}
 
 	void mainLoop() {
@@ -207,6 +219,73 @@ private:
 		}
 	}
 
+	void pickPhysicalDevice()
+	{
+		uint32_t deviceCount = 0;
+		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+		if (deviceCount == 0) throw std::runtime_error("failed to find GPUs with Vulkan support.");
+
+		std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
+		vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data());
+
+		for (const auto& device : physicalDevices) {
+			if (isDeviceSuitable(device))
+			{
+				physicalDevice = device;
+				break;
+			}
+		}
+
+		if (physicalDevice == VK_NULL_HANDLE)
+		{
+			throw std::runtime_error("failed to find a suitable GPU.");
+		}
+	}
+
+	bool isDeviceSuitable(VkPhysicalDevice device) {
+		/*============ SUPPOSE A DEVICE QUALIFIES IF IT IS A DEDICATED GPU AND SUPPORTS GEOMETRY SHADER, THEN WE'D DO THIS ======================
+		VkPhysicalDeviceProperties deviceProperties;
+		vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+		
+		VkPhysicalDeviceFeatures deviceFeatures;
+		vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+		
+		return (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) && deviceFeatures.geometryShader;
+		*/
+
+		QueueFamilyIndices indices = findQueueFamilies(device);
+		return indices.isComplete();
+	}
+
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+		QueueFamilyIndices indices;
+
+		/// make sure to pass local variable VkPhysicalDevice instead of member one
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+		int i = 0;
+		for (const auto& queueFamily : queueFamilies)
+		{
+			std::cout << queueFamily.queueCount << " ||| " << queueFamily.queueFlags << " ||| " << queueFamily.timestampValidBits << " ||| (" <<
+				queueFamily.minImageTransferGranularity.depth << "," << queueFamily.minImageTransferGranularity.depth << "," << queueFamily.minImageTransferGranularity.depth << ")" << std::endl;
+			/// If Graphics Family queue exists
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			{
+				indices.graphicsFamily = i;
+			}
+
+			if (indices.isComplete()) break;
+
+			i++;
+		}
+
+		return indices;
+	}
+
 	void populateDebugUtilsMessengerCreateInfoEXT(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
 	{
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -218,10 +297,12 @@ private:
 	}
 
 
-private:
 
+private:
+	
 	GLFWwindow* window;
 	VkInstance instance;
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT debugMessenger;
 };
 
