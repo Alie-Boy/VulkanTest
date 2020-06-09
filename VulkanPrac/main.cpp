@@ -83,6 +83,7 @@ private:
 		createInstance();
 		setupDebugMessenger();
 		pickPhysicalDevice();
+		createLogicalDevice();
 	}
 
 	void mainLoop() {
@@ -92,6 +93,7 @@ private:
 	}
 
 	void cleanup() {
+		vkDestroyDevice(device, nullptr);
 		if (enableValidationLayers)
 		{
 			DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
@@ -151,6 +153,8 @@ private:
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
+		
+		std::cout << "Extensions supported by Vulkan" << std::endl;
 		for (const VkExtensionProperties extension : availableExtensions)
 		{
 			std::cout << '\t' << extension.extensionName << '\t' << extension.specVersion << std::endl;
@@ -170,7 +174,7 @@ private:
 			// for message callbacks, It may not be necessary as validation layers already output errors to stdout
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
-
+		std::cout << "Extensions returned by glfwGetRequiredInstanceExtensions" << std::endl;
 		for (const char* extension: extensions)
 		{
 			std::cout << extension << std::endl;
@@ -270,11 +274,12 @@ private:
 		int i = 0;
 		for (const auto& queueFamily : queueFamilies)
 		{
-			std::cout << queueFamily.queueCount << " ||| " << queueFamily.queueFlags << " ||| " << queueFamily.timestampValidBits << " ||| (" <<
-				queueFamily.minImageTransferGranularity.depth << "," << queueFamily.minImageTransferGranularity.depth << "," << queueFamily.minImageTransferGranularity.depth << ")" << std::endl;
+			//std::cout << queueFamily.queueCount << " ||| " << queueFamily.queueFlags << " ||| " << queueFamily.timestampValidBits << " ||| (" <<
+			//	queueFamily.minImageTransferGranularity.depth << "," << queueFamily.minImageTransferGranularity.depth << "," << queueFamily.minImageTransferGranularity.depth << ")" << std::endl;
 			/// If Graphics Family queue exists
 			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			{
+				//std::cout << i << std::endl;
 				indices.graphicsFamily = i;
 			}
 
@@ -296,6 +301,41 @@ private:
 		createInfo.pUserData = nullptr;
 	}
 
+	
+	void createLogicalDevice()
+	{
+		QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+		queueCreateInfo.queueCount = 1;
+		float queuePriority = 1.0f;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+
+		VkPhysicalDeviceFeatures deviceFeatures{};
+
+		VkDeviceCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		createInfo.pQueueCreateInfos = &queueCreateInfo;
+		createInfo.queueCreateInfoCount = 1;
+		createInfo.pEnabledFeatures = &deviceFeatures;
+		createInfo.enabledExtensionCount = 0;
+		if (enableValidationLayers)
+		{
+			createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+			createInfo.ppEnabledLayerNames = validationLayers.data();
+		} 
+		else
+		{
+			createInfo.enabledLayerCount = 0;
+		}
+
+		VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
+		if (result != VK_SUCCESS) throw std::runtime_error("failed to create a logical device.");
+
+		vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+	}
 
 
 private:
@@ -303,6 +343,8 @@ private:
 	GLFWwindow* window;
 	VkInstance instance;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VkDevice device;
+	VkQueue graphicsQueue;
 	VkDebugUtilsMessengerEXT debugMessenger;
 };
 
