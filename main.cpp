@@ -7,6 +7,7 @@
 #include <vector>
 #include <optional>
 #include <set>
+#include <cstring>
 
 
 const uint32_t WINDOW_WIDTH = 800;
@@ -16,7 +17,7 @@ const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
 };
 
-#ifdef NDEBUG
+#ifdef NDEBUG	// todo: change to unix
 const bool enableValidationLayers = false;
 #else
 const bool enableValidationLayers = true;
@@ -61,6 +62,7 @@ public:
 		cleanup();
 	}
 
+private:
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -72,7 +74,6 @@ public:
 		return VK_FALSE;
 	}
 
-private:
 	void initWindow() {
 		glfwInit();
 
