@@ -104,6 +104,7 @@ private:
 		pickPhysicalDevice();
 		createLogicalDevice();
         createSwapChain();
+        createImageViews();
 	}
 
 	void mainLoop() {
@@ -113,6 +114,9 @@ private:
 	}
 
 	void cleanup() {
+        for (const auto& imageView : swapChainImageViews) {
+            vkDestroyImageView(device, imageView, nullptr);
+        }
         vkDestroySwapchainKHR(device, swapChain, nullptr);
 		vkDestroyDevice(device, nullptr);
 		if (enableValidationLayers)
@@ -523,6 +527,24 @@ private:
         swapChainExtent = extent;
     }
 
+    void createImageViews() {
+        swapChainImageViews.resize(swapChainImages.size());
+
+        for (size_t i = 0; swapChainImages.size(); i++) {
+            VkImageViewCreateInfo createInfo {};
+            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            createInfo.image = swapChainImages[i];
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.format = swapChainImageFormat;
+            // {r, g, b, a}
+            createInfo.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
+            // {aspectMask, baseMipLevel, levelCount, baseArrayLayer, layerCount}
+            createInfo.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+            VkResult result = vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
+            if (result != VK_SUCCESS) throw std::runtime_error("unable to create Image Views.");
+        }
+    }
+
 
 private:
 	
@@ -533,6 +555,7 @@ private:
     std::vector<VkImage> swapChainImages;
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
+    std::vector<VkImageView> swapChainImageViews;
 
 	VkInstance instance;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
