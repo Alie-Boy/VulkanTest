@@ -8,6 +8,7 @@
 #include <optional>
 #include <set>
 #include <cstring>
+#include <algorithm>
 
 
 const uint32_t WINDOW_WIDTH = 800;
@@ -105,6 +106,7 @@ private:
 		createLogicalDevice();
         createSwapChain();
         createImageViews();
+        createGraphicsPipeline();
 	}
 
 	void mainLoop() {
@@ -304,8 +306,8 @@ private:
         else {
             VkExtent2D actualExtent = {WINDOW_WIDTH, WINDOW_HEIGHT};
 
-            actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
-            actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+            actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+            actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
             return actualExtent;
         }
@@ -530,7 +532,7 @@ private:
     void createImageViews() {
         swapChainImageViews.resize(swapChainImages.size());
 
-        for (size_t i = 0; swapChainImages.size(); i++) {
+        for (size_t i = 0; i < swapChainImages.size(); i++) {
             VkImageViewCreateInfo createInfo {};
             createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             createInfo.image = swapChainImages[i];
@@ -543,6 +545,10 @@ private:
             VkResult result = vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
             if (result != VK_SUCCESS) throw std::runtime_error("unable to create Image Views.");
         }
+    }
+
+    void createGraphicsPipeline() {
+        
     }
 
 
